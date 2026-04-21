@@ -1,0 +1,12 @@
+{
+    "test":{
+        "PORT":8008,
+        "MONGODB_URI":"mongodb://140.203.155.187:8023",
+        "DATABASE":"ShipTrajectory"
+    },
+    "development":{
+        "PORT": 8008,
+        "MONGODB_URI":"mongodb://140.203.155.187:8023",
+        "DATABASE":"ShipTrajectory"
+    }
+}

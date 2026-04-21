@@ -1,0 +1,9 @@
+Warning! Make sure that Mongod is running on at localhost:27017
+
+
+mongo
+use ShipTrajectory
+
+
+mongoimport --db ShipTrajectory --collection trajectory --file trajectory.json
+
