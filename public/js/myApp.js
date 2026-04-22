@@ -1,0 +1,355 @@
+'use strict';
+
+var app = angular.module('MyApp',['leaflet-directive']);
+
+// Demonstrate how to register services
+// In this case it is a simple value service.
+app.factory('socket', function ($rootScope) {
+    var socket = io.connect();
+    return {
+      on: function (eventName, callback) {
+        socket.on(eventName, function () {  
+          var args = arguments;
+          $rootScope.$apply(function () {
+            callback.apply(socket, args);
+          });
+        });
+      },
+      emit: function (eventName, data, callback) {
+        socket.emit(eventName, data, function () {
+          var args = arguments;
+          $rootScope.$apply(function () {
+            if (callback) {
+              callback.apply(socket, args);
+            }
+          });
+        })
+      }
+    };
+});
+
+  
+function gpsTracker($scope, $http, leafletData, leafletMarkerEvents, socket) {
+  //get available ships fro the demo, at the moment 10 ships
+  $http.get('/ships-info').then(function(res) {
+    console.log(res);
+  }, function(err) {
+    console.log(err);
+  });
+
+
+  //value of the colors will be used to draw the trajectory
+  // const colors = ['red', 'green','blue', 'black','gray','teal','jade','chocolate','#691B30','#E743DF','#154381','#C4AF13','#4FDBA3','#C44C8C','#A1BAEC','#3272BB','#7FDF20','#1C52DA','#F5FC52','#545458','#58A779','#F26C6F','#6133D0','#D10EC0','#53CE60','#BAA9BD','#CA6C84','#6D3B1D','#DD05B1','#8E0E2A','#BC9545','#2F470C','#66594D','#37DC14','#CECB38','#7F8D64','#554C38','#60493F','#6DCCA4','#7CC322','#3EC8E4','#5BFAFD','#ED9B13','#EEAA8F','#163586','#4BFF67','#3D86C0','#2EC92C','#60265A','#EA785F','#A147A4','#EC0EDE','#4D3BBB','#C5D53B','#177EE3','#23DED2','#F9F7F5','#062CF5','#5E9699','#0428D9','#2D1B7C','#6674D6','#4A47A8','#850C44','#8F4209','#DE0F67','#FD2D8D','#AEF520','#EAF8F5','#68CE90','#840110','#325733','#D37B8F','#8DD64F','#8F6745','#188D2C','#BD2692','#97AD64','#9D5693','#362A3A','#571AA4','#AB9894','#2F8C77','#2F1FB4','#32DB6A','#B9F34F','#BFA99D','#A66993','#D88BF5','#2EF8CB','#C29BCF','#FE35DC','#F4533B','#45D6AF','#0E6DBE','#127564','#2B46BA','#515B21','#9E2BE1','#B4095A','#63FA4D','#538757','#FE41EA','#16C605','#BE897F','#8B7D0D','#EB58C4','#FCC439','#5EEE49','#55D53D','#093641','#C1527F','#7D2698','#BC6BD2','#01BFA8','#C74409','#1D3EE9','#26343B','#3F1B18','#213F48','#A6F033','#AC82B5','#E1FA0A','#3589C7','#27B13D','#7DF95B','#5CC2F0','#A9A9ED','#E06A3B','#796265','#81F048','#0C1CDD','#CFA40B','#399DBA','#9CC00B','#29FFEC','#DA45F9','#4DF94C','#92A001','#CCF680','#1FDDD7','#CE1405','#3BA973','#D1A7B4','#18351E','#722761','#4B0A43','#9E3CF8','#B6C7D4','#A064B8','#3AC707','#9E1162','#8E8AEA','#7FFA45','#6E28E5','#53B1C2','#635DFA','#07510D','#DD391F','#FFAB7B','#E6FEFD','#49FC1A','#5F218F','#1E169A','#63C78D','#0B6A4A','#21B91C','#3E7FDC','#EFEEBE','#76F8EC','#1CD379','#C6A626','#B907A0','#07D001','#A0F2C8','#3A0628','#ACEBFF','#92BE6D','#B6E575','#D1A090','#82D932','#D6B761','#291784','#B5B871','#C92E1A','#298B92','#C2557E','#56ABF5','#8DBDEF','#DA722C','#1A297C','#9D69FD','#CED251','#1185F0','#C36E40','#971678','#9D17F8','#ACABDE','#2686C1','#632265','#952AB2','#4C3CCB','#983DD0','#300BE6','#39BABA','#1A2EAD','#05D6CA','#B97619','#871BD4','#B91F71','#E5251D','#0A3842','#802840','#987442','#C83489','#94BD9F','#22A70C','#E37604','#426098','#2AF059','#58972B','#4115BF','#A07C70','#8EE28C','#15C313','#694623','#01C020','#286D02','#0F3A76','#12DD1F','#04A9E9','#FFB63F','#164330','#5531C8','#3CF15C','#93F7DE','#05AA76','#17FE98','#3FBE9F','#C483F0','#E6D699','#1EAD71','#A0EC4F','#7668D9','#8DE224','#05C09E','#9DE852','#F01892','#CB2ABA','#5F9620','#FF6FDF','#6B47C5','#947CEA','#9F0729','#AB2655','#3F1F7D','#BECC06','#FF6163','#9282C1','#5072D5','#6C0D1D','#7EB4CE','#20CD84','#279DC2','#E5324E','#5464A1','#7FEFCE','#4AB6F5','#FCA064','#205ED9','#1C9A41','#D7EE02','#73F933','#064D00','#F75CCB','#A9F6C2','#2C4733','#2FAE4C','#E0FAD6','#82A390','#B0BD07','#27A680','#074C5D','#4D779B','#C6218A','#58D8C5','#B37B75','#D9EC57','#D547E3','#D04106','#7F262C','#2141C8','#1274DE','#158EAF','#3035A0','#0BB92B','#8320AD','#6932A6','#32ABE4','#72AFE2','#520D92','#92E111','#317C1B','#C0B7F8','#02D514','#3CF6A4','#3DC278','#598677','#32A7BB','#25925A','#CF82AD','#B2BE5E','#A1FA07','#57FC45','#02A471','#16BE6A','#D41A4F','#44F933','#5CC8FD','#3EBA12','#5DEE6E','#C0516E','#FC7879','#2894F6','#91E8D2','#5834A9','#AE25C2','#437563','#1BD83E','#8264A5','#DBAE9B','#F3FBF4','#2B2F6A','#6B992E','#BC2FAD','#C2BB48','#FB75E6','#9D7C16','#88954E','#C0FFBC','#C3ADC1','#4CD2C7','#1FDF4D','#F68F7B','#26ACCB','#9B9C4D','#F5F314','#2FD1FD','#79F523','#921517','#CA3355','#F43A33','#1A68F0','#E9434F','#9C3393','#B7D24A','#4AB98B','#00B006','#9CCF6F','#C85F1B','#AD8630','#433758','#EDEEE3','#0AEC7A','#022963','#3438E7','#88C67A','#87B645','#9D8D1F','#269AA1','#38F8F9','#3FB342','#CD0EA8','#0A3A64','#864593','#BAF710','#E58434','#D482EF','#EECC9B','#00F0C3','#F21AF1','#5CF64A','#6EFE9D','#86B69F','#3A42DD','#D50AA5','#E1A309','#B1B7C8','#DA1A1B','#AE2CB3','#94171A','#E5F9D8','#ED9604','#495D7F','#836E30','#C20DA7','#0EF1F3','#5078DE','#26A525','#95565F','#83E201','#04E638','#B89C42','#2ACDCC','#6A73AE','#08C170','#2CDC22','#90C67F','#530C5B','#19B118','#C6FD46','#A436CA','#CFE0DF','#489553','#C31763','#24D4EC','#FBE32F','#663C78','#DC43AA','#FA04AC','#82FC77','#FB44D9','#382087','#84C705','#63C8C7','#49BCED','#792056','#C2BBA5','#46A0F1','#3AED54','#5A0729','#CCB1BE','#A165CA','#F2C3A3','#A7890D','#4DE630','#E2143A','#28FCEE','#11A2B2','#3FA100','#15A518','#2250E3','#0347A9','#DCB0C5','#49609A','#8E3EAC','#37BD20','#C83ED1','#7A11B9','#EEDC02','#F01183','#3D9DFB','#346F7F','#36E49E','#ED6C49','#EAA45F','#F2ABDB','#9BB864','#EE749D','#5D9ACD','#C3E9C9','#F501AA','#F0BD51','#734066','#99CE9F','#AD9F60','#55C534','#74879A','#37CC18','#495C5A','#1ECE9A','#0C35A9','#A7F511','#F0A90F','#B88433','#4C0085','#AB046E','#2D4616','#3ED980','#997E78','#F9F89E','#687900','#348AD1','#ACC939','#4F1BCB','#26633C','#213CBA','#89D007','#611B99','#B8B211','#765B86','#510E1B','#358068','#6DA189','#CADB94','#770F0D','#CC773A','#D3B550','#D39F21','#7A8CF7','#45DDA0','#6CE59D','#52326F','#7D87B2','#679325','#B95048','#FD7EF5','#3AD476','#FF25AD','#22CD14','#70F25E','#B9ABF0','#3F9A57','#9C5612','#5BF39E','#1A6C83','#400157','#361F90','#BF5445','#2B48E3','#3528DF','#309B21','#6D46FC','#2ADB68','#36B7DB','#02CC39','#A5B82E','#7B58FC','#AFE795','#F5B64E','#C171FA','#AE911A','#1B798A','#CED7BE','#955B40','#1E784C','#3C678E','#590702','#50E638','#A5C2F0','#D09883','#E0E2CA','#86E615','#13A11C','#6AA314','#83F667','#A27993','#FAF80F','#912FEF','#EB7EEA','#B35D4F','#2206EB','#542097','#214758','#8176CE','#5D731E','#2E7FA3','#D2417E','#AC44FA','#B19040','#9683B6','#9B7767','#7E0F4D','#FE4942','#67D37D','#ACBA96','#39328A','#FC5681','#0BC2E0','#B88259','#1BCD0B','#7E015A','#F14D9D','#3FBE16','#B8E7B9','#70F575','#9177EE','#35BF74','#D7F4E8','#00F120','#BF75CE','#651B1A','#8FCAC4','#8713F5','#DCCA7E','#FFF0B1','#ACF43C','#9CB7B9','#B42E04','#E35B84','#4D959B','#517496','#5B014A','#BB9D69','#4D3AFF','#8FAD5F','#1DE2D0','#699F19','#FA7834','#56F7BE','#1AC704','#27D773','#4DCC12','#5F2D6E','#950934','#DD1045','#6E8188','#E9C62D','#B2F705','#4096BC','#5E853D','#85F381','#3FF8EF','#8ADEBD','#2070F1','#B0BE63','#4B2C86','#A95F6A','#7074DD','#A6EAD9','#45634E','#AB426A','#B49E11','#9AE741','#40F694','#F0BC27','#5D413A','#EF069A','#DAACBF','#182DD8','#CAA9B5','#211FA2','#F61CB4','#4B4917','#8A3A53','#D285E6','#71632E','#1806C1','#F48183','#DE6BCE','#A8C54C','#0762B5','#098AFD','#B55250','#0E9E05','#34D580','#B3EA00','#A55F88','#91F23D','#82027D','#FCD2A2','#254C61','#FC6F20','#1486AC','#CAE031','#E44BF7','#48BA1E','#F2ED3C','#6A0CA1','#EB9F7F','#09726F','#A3A83E','#8FB64A','#5753FB','#11618C','#14B945','#A1956E','#587065','#AA3D28','#D06C7E','#83EF3E','#2A7F69','#2D1D54','#19D883','#E590D0','#80675D','#D934FA','#B8DF63','#422393','#56A5B7','#806A60','#F60099','#D35A55','#809A4D','#CD32CA','#46AC24','#5EA702','#EB01DA','#5E0608','#5B7F20','#ACAED0','#19F204','#6E131E','#62BE27','#797FBA','#F2640C','#9D5144','#659A20','#AB50DA','#A36A34','#3F78FD','#3E4BAE','#83CD1E','#B8EC43','#865698','#CF86B6','#FBE7E5','#1D9770','#5EB453','#C75B94','#891329','#9A9F38','#E9A9A0','#75C853','#B93477','#FB8286','#495A38','#1C9283','#715FB7','#F33AA1','#CCCD64','#74D93F','#CD385C','#AE935E','#D3B817','#EFEE1D','#2E72A2','#390260','#091515','#28695F','#F24701','#BA1AFC','#108F4B','#01D2FC','#6FFBBB','#0B23BD','#8FF9B4','#D4D819','#B3DD06','#419F39','#4EC1CF','#798AAF','#30F010','#DB3411','#115A46','#88BB45','#06C8E2','#9734C5','#258E4C','#A18A4B','#9DC0F0','#0E070B','#897418','#D97F68','#7214F4','#F9F3B2','#E801D4','#FF176A','#012CF8','#B9970A','#A3F05E','#4513AA','#872182','#F9D5C2','#A94D1C','#E328B0','#8F8770','#367646','#B3E40D','#CC026A','#E8105B','#62CA27','#01D51D','#39FA3F','#52F684','#4C53D8','#B62692','#E0CB6C','#6EA51C','#C64FD0','#A85453','#ED110C','#36EBCD','#DEF2B4','#12CF54','#C31E19','#E49B39','#E71544','#2DBBBE','#B2B97B','#BC7286','#6D1C0B','#F888E6','#A94ADC','#64FC8B','#84C5F1','#00521B','#E08FE3','#5BD724','#BB7648','#BF389E','#C751C1','#25A574','#C37899','#D46501','#6F85DD','#D2442B','#D15E5B','#68B887','#AF3399','#69AF20','#E138B0','#4766C8','#2C2714','#F90BF6','#1CD0C7','#C22DC3','#2CA50D','#C50DF6','#6E042E','#E89538','#3AD7AE','#6CED30','#ED0495','#85BEA6','#C28C09','#01B263','#0F8B38','#F03483','#D4785A','#667045','#A72535','#9AE892','#0D6689','#15308D','#6CEB1D','#4444EB','#1233FE','#477653','#F74E47','#2A0B2D','#800D40','#C1405D','#D2BF90','#25F961','#3BF73A','#F1A29F','#448A9D','#D0B091','#0112A1','#0119D6','#F0530C','#A4B3BB','#991F6B','#78BD48','#E08C28','#EF4FDB','#C0FE63','#D3E510','#15F6D5','#7C8BC0','#72DCF2','#E79BA5','#18529B','#C57C05','#3FC330','#DA176E','#97041C','#99624F','#1EB602','#73BAA4','#EA685F','#16D73D','#948F13','#35DACB','#A6972C','#DAA783','#E7DFBF','#DEAFB8','#59A875','#54A828','#6234F4','#7925AA','#DAE237','#6FC266','#C96122','#E1873D','#C26829','#5B97B1','#343A25','#0BFFD2','#86CA4E','#26D97C','#6FA73C','#3A5F5F','#A14D30','#9B66D3','#1F7F35','#9AA116','#A1FDB0','#98841F','#322F02','#8726E6','#BF5887','#C8FF7F','#ACAEC4','#10A42B','#C23659','#CF3861','#10E8D0','#E8ED51','#B89A59','#A4B775','#9CC72F','#57CB40','#76AD2D','#349CC0','#FF996A','#9E9E83','#162D20','#F39CEC','#2B89CB','#4387D5','#BB5986','#9C54EE','#296E18','#2B4C2F','#5B5A13','#24113C','#5B9B47','#4160D2','#1FFF72','#089B7F','#6E01A6','#E1AA18','#F231F3','#61F2C4','#7ADD3D','#4E7E99','#EE479A','#5F5B7F','#8BA9E2','#A79185','#9F3D17','#5292B8','#9FA211','#4AD9B0','#577E47','#6FEECB','#5F538E'];
+  const colors = ["#ff0000", "#403010", "#005953", "#bf3030", "#b2982d", "#005c73", "#584359", "#4c2b26", "#66005f", "#6d7356", "#330029", "#806460", "#d936a3", "#661b00", "#1f7300", "#002233", "#cc0052", "#33cc33", "#1d3f73", "#bf6086", "#bf4d00", "#003307", "#101640", "#4c0014", "#ff8800", "#00a66f", "#23238c", "#7f4400",  "#8273e6", "#a640ff"];
+  //variables to hold data points, markers and popup 
+  var shipsData = {};
+  var markers = {};
+  var popups = {};
+
+  var colorCount = 0;
+  
+  // var initLat = 38.13205;
+  // var initLng = 13.33561;
+  // var zoomLevel = 6;
+
+  //the flag indicates when the server is done streaming
+  $scope.done_streaming = true;
+
+  //the map
+  var map = L.map('map');//.setView([initLat, initLng], zoomLevel);
+
+  map.fitBounds([
+    [44.435915, -5.9],
+    [31.382546, 32.963458]
+  ]);
+  // map.fitBounds([
+  //   [-4.8587000, 39.8772333],
+  //   [-6.4917667, 39.0945000]
+  // ]);
+
+  var titleLayer = L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: 'Open Street Map',
+    maxZoom: 25
+  });
+  
+  titleLayer.addTo(map);
+
+  var createLineOption = function(color, lineWeight, purpose) {
+    if (purpose === 'CURRENT') {
+      return  {
+        color: color,
+        weight: lineWeight,
+        opacity: 0.5,
+        smoothFactor: 1
+      };
+    } else if (purpose === 'FUTURE') {
+      return {
+        color: color,
+        weight: lineWeight,
+        opacity: 0.5,
+        smoothFactor: 1,
+        dashArray: '5,5',
+        lineJoin: 'round'
+      };
+    }
+  }
+
+  var drawLines = function(src, des) {
+    
+    const shipId = src.shipId;
+    var marker = markers[shipId];
+    var popup = popups[shipId];
+  
+    var coord = new L.LatLng(src.lat, src.lon);
+    var predictedDesCoords = [];
+
+    //console.log(shipId + ' ' +  des.arrivalTime + ' ' + des.bestDest)
+    //console.log(src.speed);
+    if (src.speed>5.0)
+      for (var i = 0; i < des.routes.length; i++) {
+        var route = [coord];
+        for (var j = 0; j < des.routes[i].tgt.length; j++) {
+          route.push(new L.LatLng(des.routes[i].tgt[j].lat, des.routes[i].tgt[j].lon));  
+        }
+        
+        predictedDesCoords.push({route:route,
+                                lineWeight: des.routes[i].lineWeight});
+      }
+
+    //if this is a new ship
+    if (marker === undefined) {
+      if (Object.keys(shipsData).length) {
+        colorCount++;
+      }
+
+      const color = colors[colorCount];
+
+      const currentLineWeight = 4;
+
+      const currentLineOptions = createLineOption(color, currentLineWeight, 'CURRENT');
+      
+      const shipTypeId = Math.floor(src.shipType/10);
+      // console.log(shipTypeId);
+      const shipIcon = L.icon({
+        iconUrl: shipTypes.icons[shipTypeId-1].path,
+        iconSize:     [20, 20], // size of the icon
+        // shadowSize:   [0, 0], // size of the shadow
+        // iconAnchor:   [0, 0], // point of the icon which will correspond to marker's location
+        // shadowAnchor: [0,0],  // the same for the shadow
+        // popupAnchor:  [0, 0] // point from which the popup should open relative to the iconAnchor
+      });
+
+      // marker = new L.circleMarker(coord, geojsonMarkerOptions).addTo(map);    
+      marker = new L.marker(coord, {icon: shipIcon}).addTo(map);    
+      
+      const popupContent = '<img src= ' + shipTypes.sources[shipTypeId-1].path + ' width="250px"/></br>'
+                         + '<span>Ship Id: ' + shipId.substring(1, 20) + '<span/></br>';
+    
+                         
+
+      popup = new L.popup()
+      .setLatLng(coord)
+      .setContent(popupContent);
+
+      // "<p>Ship '+ colorCount + '</p>" +
+          
+      marker.bindPopup(popup);
+      // map.addLayer(popup);
+  
+      markers[shipId] = marker;
+      popups[shipId] = popup;
+
+      var currentRoute = new L.Polyline([coord], currentLineOptions);
+      var decorator = L.polylineDecorator(currentRoute, {
+        patterns: [{ offset: 25, 
+                     repeat: 100, 
+                     symbol: L.Symbol.arrowHead({pixelSize: 15, 
+                                                 pathOptions: {
+                                                   fillOpacity: 0.5, 
+                                                   weight: 0,
+                                                   color: color}})}
+        ]
+      });
+
+      var futureRoutes = [];
+      
+      for (var i = 0; i< predictedDesCoords.length; i++) {
+        const futureLineOptions = createLineOption(color, predictedDesCoords[i].lineWeight, 'FUTURE');
+        futureRoutes.push(new L.Polyline(predictedDesCoords[i].route, futureLineOptions));
+      };
+
+      shipsData[shipId] = {actualRoute: currentRoute,
+                           decorator: decorator,
+                           futureRoutes: futureRoutes,
+                           color: color};
+
+      shipsData[shipId].actualRoute.addTo(map);
+
+      shipsData[shipId].actualRoute.on('mouseover', function(ev) {
+        console.log('Hello world');
+      });
+      
+
+      shipsData[shipId].decorator.addTo(map);
+
+      for (var i = 0; i< shipsData[shipId].futureRoutes.length; i++ ) {
+        shipsData[shipId].futureRoutes[i].addTo(map);
+        // shipsData[shipId].futureRoutes[i].on('click', function(ev) {
+        //   alert('Hello world!');
+        // });
+      };
+
+    } else {//if this is an existing ship
+      marker.setLatLng(coord);
+      popup.setLatLng(coord);
+
+      shipsData[shipId].actualRoute.addLatLng(coord);
+      shipsData[shipId].decorator.removeFrom(map);
+      shipsData[shipId].decorator.addTo(map);
+
+      //remove previous future routes 
+      for (var i = 0; i< shipsData[shipId].futureRoutes.length; i++ ) {
+        shipsData[shipId].futureRoutes[i].removeFrom(map);
+      }
+
+      //create new future routes
+      var futureRoutes = [];
+      
+      for (var i = 0; i< predictedDesCoords.length; i++) {
+        const futureLineOptions = createLineOption(shipsData[shipId].color, predictedDesCoords[i].lineWeight, 'FUTURE');
+        futureRoutes.push(new L.Polyline(predictedDesCoords[i].route, futureLineOptions));
+      };
+
+      shipsData[shipId].futureRoutes = futureRoutes;
+      
+      //add new future routes to map
+      for (var i = 0; i< shipsData[shipId].futureRoutes.length; i++ ) {
+        shipsData[shipId].futureRoutes[i].addTo(map);
+        // shipsData[shipId].futureRoutes[i].on('click', function(ev) {
+        //   alert('Hello world!');
+        // });
+      };
+
+      //changing the content on mouseover
+      //console.log(src,des);
+      // const popupContent2 = '<img src= ' + shipTypes.sources[Math.floor(src.shipType/10)-1].path + ' width="250px"/></br>'
+      //                   + '<span>Ship Id           : ' + src.shipId.substring(1, 20) + '<span/></br>'
+      //                   + '<span>Current Speed     : ' + src.speed + '<span/></br>'
+      //                   + '<span>Pred. Destination : ' + des.bestDest + '<span/></br>'
+      //                   + '<span>Pred. Arrival     : '+ des.arrivalTime  + '<span/></br>'
+      //                   ;
+
+
+      const popupContent2 = '<img src= ' + shipTypes.sources[Math.floor(src.shipType/10)-1].path +' style="width:22em;"/></br></br>'
+                            + '<table class="tg">'
+                            +' <tr>'
+                            +'  <th><img src= ' + shipTypes.popup_icons[0].path + ' style="height:1em;"/></th>'
+                            +'  <th>Ship ID:</th>'
+                            +'  <th style="color:green;font-size:1em;" >' + src.shipId.substring(1, 20) + '</th>'
+                            +'</tr>'
+                            +'<tr>'
+                            +'  <th><img src= ' + shipTypes.popup_icons[1].path + ' style="height:1em;"/></th>'
+                            +'  <td>Ship Type:<br></td>'
+                            +'  <td style="color:green;font-size:1em;" >' + src.shipType + '</td>'
+                            +'</tr>'
+                            +'<tr>'
+                            +'  <th><img src= ' + shipTypes.popup_icons[2].path + ' style="height:1em;"/></th>'
+                            +'  <td>Current Speed:<br></td>'
+                            +'  <td style="color:green;font-size:1em;" >' + src.speed + '</td>'
+                            +'</tr>'
+                            +'<tr>'
+                            +'  <th><img src= ' + shipTypes.popup_icons[3].path + ' style="height:1em;"/></th>'
+                            +'  <td>Pred. Destination:<br></td>'
+                            +'  <td style="color:green;font-size:1em;" >  ' + des.bestDest + ' </td>'
+                            +'</tr>'
+                            +'<tr>'
+                            +'  <th><img src= ' + shipTypes.popup_icons[4].path + ' style="height:1em;"/></th>'
+                            +'  <td>Pred. Arrival time:<br></td>'
+                            +'  <td style="color:green;font-size:1em;" > '+ des.arrivalTime  + ' </td>'
+                            +'</tr>'
+                            +'</table>'
+
+      popup.setContent(popupContent2);
+      popups[shipId] = popup;
+    
+      
+
+
+    }
+  }
+
+  const clearMap = function() {
+    Object.keys(markers).forEach(function(key) {
+      markers[key].removeFrom(map);
+    });
+    markers = {};
+
+    Object.keys(popups).forEach(function(key) {
+      popups[key].removeFrom(map);
+    });
+    popups = {};
+    
+    Object.keys(shipsData).forEach(function(key) {
+      shipsData[key].actualRoute.removeFrom(map);
+      shipsData[key].decorator.removeFrom(map);
+      for (var i = 0; i< shipsData[key].futureRoutes.length; i++ ) {
+        shipsData[key].futureRoutes[i].removeFrom(map);
+      };
+    });
+    shipsData = {};
+  }
+
+  $scope.btnClearClick = function() {
+    clearMap();
+  }
+
+  $scope.btnStartClick = function() {
+    clearMap();
+    
+    var dataObj = {
+      streamRate: $scope.streamRate,
+      singleShipOnly: $scope.singleShipOnly
+    }
+
+    $http.post('/start', dataObj).then(function(err, res){
+      if (err) {
+        console.log(err);
+      } else {
+        $scope.done_streaming = false;
+        console.log(res);
+      }
+    }
+    ).catch(function(err, res) {
+      console.log(err);
+    });
+  }
+
+  socket.on('connect', function(){
+    console.log('Connected to the server');
+  });
+
+  socket.on('ship-data', function(c) {
+
+    //console.log(JSON.stringify(c));
+    drawLines(c.src, c.des);
+  });
+
+  socket.on('done-streaming', function() {
+    console.log('server has done streaming!');
+    $scope.done_streaming = true;
+  });
+
+  socket.on('clean-map', function() {
+    var shipsData = {};
+    var markers = {};
+    var popups = {};  
+
+    map.eachLayer(function (layer) {
+      map.removeLayer(layer);
+    });
+
+    titleLayer.addTo(map);
+  });
+}
+
+app.controller('gptrackerCtrl', ['$scope', '$http', 'leafletData', 'leafletMarkerEvents', 'socket', gpsTracker]);

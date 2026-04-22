@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en" ng-app="MyApp">
+<head>
+  <meta charset="utf-8">
+  <title>Vessel Trajectory Prediction with Seq2Seq</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/leaflet.css">
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  
+  <script src="js/libs/leaflet.js"></script>
+  <script src="js/libs/leaflet.polylineDecorator.js"></script>
+  <script src="js/libs/leaflet.rotatedMarker.js"></script>
+  <script src="js/libs/socket.io.js"></script>
+  <script src="js/libs/angular.min.js"></script>
+  <script src="js/libs/angular-leaflet-directive.min.js"></script>
+  <script type="application/javascript" src="js/config.js"></script>
+  <script src="js/myApp.js"></script>
+ 
+  <style type="text/css">
+    .tg  {border-collapse:collapse;border-spacing:0;border:none;}
+    .tg td{font-family:Arial, sans-serif;padding:0.4em 0.2em;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;}
+    .tg th{font-family:Arial, sans-serif;font-weight:normal;padding:0.4em 0.2em;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;}
+    </style>
+
+</head>
+
+<body ng-controller="gptrackerCtrl as ctrl">
+    <nav class="navbar navbar-expand-sm navbar-light" style="background-color: #e3f2fd;">
+        <div class="nav navbar-nav" id="navbarNav">
+          <form class="form-inline my-2 my-sm-0" name="paramForm">
+              <div class="form-row align-items-center">
+                  <div class="col-auto my-1">
+                    <label class="mr-sm-2" for="inlineFormCustomSelect">Display Mode</label>
+                    <select class="custom-select mr-sm-2" id="inlineFormCustomSelect" ng-model="singleShipOnly" placeholder="Select Mode...">
+                      <option selected value="1">Multiple Vessels</option>
+                      <option value="2">Single Vessel</option>
+                    </select>
+                  </div>
+
+                  <div class="col-auto my-1">
+                      <label class="mr-sm-2" for="inlineFormCustomSelect">Stream Rate</label>
+                      <input class="form-control mr-sm-2" type="number" min="0" placeholder="Stream rate(ms)" ng-model="streamRate" value="100" step="10">
+                    </div>
+
+                  <div class="col-auto my-1">
+                      <button class="btn btn-success my-2 my-sm-0" type="submit" ng-disabled="paramForm.$invalid || !done_streaming" ng-click="btnStartClick()">Start</button>
+                  </div>
+                </div>
+
+              
+              
+              <!-- <button class="btn btn-outline-success my-2 my-sm-0" type="submit" ng-click="btnClearClick()">Clear Map</button> -->
+              <!-- <input checked class="form-control mr-sm-2" type="checkbox" name="single-ship-box" ng-model="singleShipOnly"> Show single vessel<br>-->
+
+
+            </form>
+        </div>
+
+  </nav>
+  <div id="map">   
+  </div>
+</body>
+
+</html>
